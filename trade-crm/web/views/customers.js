@@ -107,6 +107,8 @@ export default async function customers({ query, navigate }) {
     <div><h1>${followMode ? '客户跟进' : query.source === '海关数据' ? '海关客户池' : '客户档案'}</h1>
       <p>${followMode ? '以业务时间轴追溯历史跟进、报价与海关记录，还原商务过程' : '以客户为中心，基础信息、跟进动态、海关交易与商机自动归档'}</p></div>
     <div class="spacer"></div>
+    <button class="btn" id="data-tools">数据管理</button>
+    <button class="btn" id="import-csv">导入 CSV</button>
     <button class="btn" id="export-csv">导出 CSV</button>
     <button class="btn primary" id="new-customer">+ 新建客户</button>
   </div>
@@ -151,6 +153,12 @@ function bindCustomersPage(origQuery, data, followMode) {
     location.hash = `#/customers?${new URLSearchParams(q)}`;
   };
   app.querySelector('#new-customer')?.addEventListener('click', () => openCustomerForm(null, () => location.reload()));
+  app.querySelector('#import-csv')?.addEventListener('click', () => {
+    import('./dataTools.js').then((m) => m.openImport('customers', () => location.reload()));
+  });
+  app.querySelector('#data-tools')?.addEventListener('click', () => {
+    import('./dataTools.js').then((m) => m.openDataTools(() => location.reload()));
+  });
   app.querySelector('#kw')?.addEventListener('input', debounce((e) => setQuery({ keyword: e.target.value }), 350));
   app.querySelector('#f-country')?.addEventListener('change', (e) => setQuery({ country: e.target.value }));
   app.querySelector('#f-industry')?.addEventListener('change', (e) => setQuery({ industry: e.target.value }));

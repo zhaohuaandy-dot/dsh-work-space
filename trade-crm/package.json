@@ -8,6 +8,7 @@
   "scripts": {
     "start": "node server/index.mjs",
     "seed": "node server/seed.mjs --reset",
-    "test": "node scripts/smoke.mjs"
+    "test": "node scripts/smoke.mjs",
+    "test:import": "node scripts/import-test.mjs"
   }
 }

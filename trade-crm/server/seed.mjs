@@ -82,7 +82,9 @@ export function seed({ reset = false } = {}) {
   if (isSeeded(db)) return { seeded: false, reason: 'already seeded' };
 
   const now = NOW();
-  const insUser = db.prepare('INSERT INTO users (id, name, role, dept, email, avatar_hue) VALUES (?, ?, ?, ?, ?, ?)');
+  // 用户表是系统账号，可能已存在（例如清空业务数据后重新导入真实数据）：
+  // 用 INSERT OR IGNORE 保证重复初始化不会因主键冲突而中断。
+  const insUser = db.prepare('INSERT OR IGNORE INTO users (id, name, role, dept, email, avatar_hue) VALUES (?, ?, ?, ?, ?, ?)');
   for (const u of USERS) insUser.run(u.id, u.name, u.role, u.dept, u.email, u.hue);
 
   const insCustomer = db.prepare(`INSERT INTO customers

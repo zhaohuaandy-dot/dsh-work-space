@@ -45,7 +45,7 @@ const ROUTES = {
   handovers: { view: handovers, title: ['业务管理', '客户移交'] },
 };
 
-// 页面内通用交互：data-go 跳转、data-new-customer 新建客户
+// 页面内通用交互：data-go 跳转、data-new-customer 新建客户、数据导入入口
 function bindGlobal(app) {
   app.addEventListener('click', async (e) => {
     const go = e.target.closest('[data-go]');
@@ -53,6 +53,16 @@ function bindGlobal(app) {
     if (e.target.closest('[data-new-customer]')) {
       const { openCustomerForm } = await import('./views/customers.js');
       openCustomerForm(null, () => render());
+      return;
+    }
+    if (e.target.closest('[data-data-tools]')) {
+      const { openDataTools } = await import('./views/dataTools.js');
+      openDataTools(() => render());
+      return;
+    }
+    if (e.target.closest('[data-import-customers]')) {
+      const { openImport } = await import('./views/dataTools.js');
+      openImport('customers', () => render());
     }
   });
 }

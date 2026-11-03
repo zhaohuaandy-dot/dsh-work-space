@@ -5,6 +5,9 @@
 - 零第三方依赖：仅使用 Node.js 内置的 `node:http` 与 `node:sqlite`（Node ≥ 22.5）
 - 原生前端（无构建步骤）：ES Modules + 手写 CSS + 内联 SVG 图表
 - SQLite 落库，首次启动自动建表并写入演示数据
+- **CSV 导入导出**：把 Excel 里的客户表、海关提单导进系统（支持 GBK 编码、自动去重、先校验后写入）
+
+> 只想尽快上手？看 **[USAGE.md](USAGE.md)** —— 怎么清掉演示数据、导入自己的客户表、以及各模块适用场景。
 
 ## 快速开始
 
@@ -142,6 +145,11 @@ trade-crm/
 | POST | `/api/activities/:id/advance` | 推进发送状态 |
 | GET/POST | `/api/templates` | 邮件模板 |
 | POST | `/api/templates/:id/render` | 模板变量渲染 |
+| GET | `/api/import/template/:kind` | 下载导入模板（customers / customs） |
+| POST | `/api/import/customers` | 导入客户 CSV（`csv`、`dry_run`） |
+| POST | `/api/import/customs` | 导入海关数据 CSV（`csv`、`dry_run`） |
+| GET | `/api/customers/export` | 导出客户 CSV |
+| POST | `/api/reset` | 清空业务数据（`confirm=DELETE`，`reseed` 可恢复演示数据） |
 
 错误统一返回 `{ "error": "..." }`，并带语义化状态码（400 参数错误、404 不存在、409 重复建档、413 请求体过大）。
 

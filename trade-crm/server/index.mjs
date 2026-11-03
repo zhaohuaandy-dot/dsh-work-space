@@ -5,6 +5,8 @@ import { extname, join, normalize, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { dispatch, ApiError } from './api.mjs';
 import { seed } from './seed.mjs';
+import { isUserDataMode } from './importer.mjs';
+import { getDb } from './db.mjs';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const PUBLIC = join(ROOT, 'web');
@@ -79,7 +81,8 @@ export function createApp() {
 }
 
 if (import.meta.url === `file:///${process.argv[1]?.replace(/\\/g, '/')}` || process.argv[1]?.endsWith('index.mjs')) {
-  seed();
+  // 首次启动灌入演示数据；用户清空并录入自己的数据后（cleared_at 标记）不再自动灌回
+  if (!isUserDataMode(getDb())) seed();
   createApp().listen(PORT, HOST, () => {
     console.log(`外贸客户管理系统已启动: http://${HOST}:${PORT}`);
   });

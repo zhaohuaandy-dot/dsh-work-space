@@ -1,5 +1,7 @@
 // 业务 API：客户管理、海关数据分析、商机、跟进、营销活动、模板、客保与公海、移交。
 import { getDb, NOW } from './db.mjs';
+import { parseCsv, importCustomers, importCustoms, customerCsvTemplate, customsCsvTemplate, clearBusinessData } from './importer.mjs';
+import { seed } from './seed.mjs';
 
 const json = (status, body) => ({ status, body });
 
@@ -704,6 +706,57 @@ export function verifyLogin(email) {
   return { status: 200, body: { token: `demo-${user.id}`, user } };
 }
 
+// ---------- CSV 导入 / 导出 / 清空 ----------
+export function handleImport(kind, body) {
+  const csv = String(body.csv ?? '');
+  if (!csv.trim()) throw bad('请提供 CSV 内容');
+  const rows = parseCsv(csv);
+  if (!rows.length) throw bad('CSV 没有数据行');
+  const dryRun = body.dry_run === true;
+  try {
+    const r = kind === 'customers' ? importCustomers(rows, { dryRun }) : importCustoms(rows, { dryRun });
+    return { status: 200, body: { ...r, headers: rows[0] ?? [] } };
+  } catch (e) {
+    // 导入器抛出的校验错误转成 400，保留原始提示（含表头回显）
+    if (e && e.status) throw new ApiError(e.status, e.message);
+    throw e;
+  }
+}
+
+export function importTemplate(kind) {
+  return { status: 200, body: { csv: kind === 'customers' ? customerCsvTemplate() : customsCsvTemplate() } };
+}
+
+export function resetData(body) {
+  if (body.confirm !== 'DELETE') throw bad('请传入 confirm=DELETE 以确认清空');
+  const r = clearBusinessData();
+  if (body.reseed) {
+    // 恢复演示数据：先撤掉 cleared_at 标记，再由 seed 重新灌入（users 用 INSERT OR IGNORE）
+    getDb().exec("DELETE FROM meta WHERE key = 'cleared_at'");
+    const s = seed({ reset: true });
+    return { status: 200, body: { ...r, reseeded: s.seeded } };
+  }
+  return { status: 200, body: r };
+}
+
+export function exportCustomersCsv() {
+  const db = getDb();
+  const rows = db.prepare(`SELECT c.code, c.name, c.name_en, c.country, c.industry, c.level, c.source, c.status,
+      COALESCE(u.name, '') owner, COALESCE(c.protection_until, '') protect,
+      (SELECT k.name FROM contacts k WHERE k.customer_id = c.id AND k.is_kp = 1 LIMIT 1) contact,
+      (SELECT k.email FROM contacts k WHERE k.customer_id = c.id AND k.is_kp = 1 LIMIT 1) email,
+      (SELECT k.phone FROM contacts k WHERE k.customer_id = c.id AND k.is_kp = 1 LIMIT 1) phone
+    FROM customers c LEFT JOIN users u ON u.id = c.owner_id ORDER BY c.id`).all();
+  const head = ['编码', '客户名称', '英文名称', '国家', '行业', '客户分级', '线索来源', '状态', '负责人', '客保到期', '联系人', '邮箱', '电话'];
+  const esc = (v) => {
+    const s = String(v ?? '');
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const csv = [head, ...rows.map((r) => [r.code, r.name, r.name_en, r.country, r.industry, r.level, r.source, r.status, r.owner, r.protect, r.contact, r.email, r.phone])]
+    .map((r) => r.map(esc).join(',')).join('\r\n');
+  return { status: 200, body: { csv, count: rows.length } };
+}
+
 export function dispatch(route, method, q, body) {
   const [seg1, seg2, seg3] = route;
   const m = method.toUpperCase();
@@ -713,6 +766,13 @@ export function dispatch(route, method, q, body) {
   if (seg1 === 'options' && !seg2) return customerOptions();
   if (seg1 === 'ping') return { status: 200, body: { ok: true, at: NOW() } };
   if (seg1 === 'login' && m === 'POST') return verifyLogin(body.email);
+
+  if (seg1 === 'import') {
+    if (seg2 === 'template' && m === 'GET') return importTemplate(seg3 ?? 'customers');
+    if (seg2 && m === 'POST') return handleImport(seg2, body);
+  }
+  if (seg1 === 'customers' && seg2 === 'export' && m === 'GET') return exportCustomersCsv();
+  if (seg1 === 'reset' && m === 'POST') return resetData(body);
 
   if (seg1 === 'customers') {
     if (!seg2 && m === 'GET') return { status: 200, body: listCustomers(q) };

@@ -64,9 +64,19 @@ export default async function dashboard({ navigate }) {
       <p>销售全流程概览 · 数据更新于 ${new Date().toLocaleString('zh-CN', { hour12: false })}</p>
     </div>
     <div class="spacer"></div>
-    <button class="btn" data-go="#/customs/analysis">海关数据分析</button>
+    <button class="btn" data-go="#/customs">海关数据分析</button>
+    <button class="btn" data-data-tools>数据管理</button>
     <button class="btn primary" data-new-customer>+ 新建客户</button>
   </div>
+
+  ${s.customers.total === 0 ? `<div class="card mb16" style="border-color:#cfe0fb;background:var(--brand-soft)">
+    <div class="card-body">
+      <h2 style="color:#1d4f9e">开始录入你自己的数据</h2>
+      <p class="small" style="color:#1d4f9e;margin:6px 0 10px">当前库里没有客户。可以先用 CSV 把你的客户表和海关提单导进来（支持 Excel 另存的 CSV）。</p>
+      <button class="btn primary" data-import-customers>导入客户 CSV</button>
+      <button class="btn" data-go="#/customs" style="margin-left:8px">导入海关数据</button>
+    </div>
+  </div>` : ''}
 
   <div class="kpis">
     ${kpi('客户总数', fmtInt(s.customers.total), `跟进中 <b>${s.customers.active}</b> · 已成交 <b>${s.customers.won}</b> · 公海 <b>${s.customers.sea}</b>`, '◉', 'blue')}

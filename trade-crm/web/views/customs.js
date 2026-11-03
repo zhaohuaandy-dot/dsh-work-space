@@ -25,6 +25,7 @@ export default async function customs({ query }) {
     <div class="spacer"></div>
     <input class="input" id="kw" placeholder="搜索采购商 / 商品 / HS 编码" style="width:240px" value="${esc(query.keyword ?? '')}" />
     <select class="input" id="f-country" style="width:120px"><option value="">全部国家</option>${opts.countries.map((c) => `<option ${c === query.country ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
+    <button class="btn" id="import-customs">导入海关数据</button>
     <button class="btn" id="export">导出</button>
   </div>
 
@@ -135,6 +136,9 @@ function bindCustoms(query, list) {
   };
   app.querySelector('#kw')?.addEventListener('input', debounce((e) => reloadWith({ keyword: e.target.value.trim() }), 400));
   app.querySelector('#f-country')?.addEventListener('change', (e) => reloadWith({ country: e.target.value }));
+  app.querySelector('#import-customs')?.addEventListener('click', () => {
+    import('./dataTools.js').then((m) => m.openImport('customs', () => location.reload()));
+  });
   app.querySelector('#export')?.addEventListener('click', () => {
     const rows = [['到港日期', '采购商', '国家', '商品', 'HS 编码', 'TEU', '金额USD', '承运', '客户档案']];
     for (const r of list.items) rows.push([r.shipment_date, r.importer, r.importer_country, r.product, r.hs_code, r.teu, r.amount_usd, r.carrier, r.customer_name ?? '未建档']);
