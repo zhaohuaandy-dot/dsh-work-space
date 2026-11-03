@@ -243,11 +243,6 @@ export function customsAnalysis(q) {
     FROM customs s WHERE s.customer_id IS NULL AND s.trade_type = '进口'
     GROUP BY s.importer, s.importer_country ORDER BY amount DESC LIMIT 10`).all().map((r) => ({ ...r, amount: Math.round(r.amount) }));
 
-  const year = q.year || String(new Date().getUTCFullYear() - 1);
-  const top = db.prepare(`SELECT s.importer name, s.importer_country country, SUM(s.amount_usd) amount
-    FROM customs s WHERE s.trade_type = '进口' AND substr(s.shipment_date,1,4) = ? ${whereSql}
-    GROUP BY s.importer, s.importer_country ORDER BY amount DESC LIMIT 5`).all(year, ...params).map((r) => ({ ...r, amount: Math.round(r.amount) }));
-
   const byCountry = db.prepare(`SELECT s.importer_country name, COUNT(*) shipments, SUM(s.teu) teu, SUM(s.amount_usd) amount
     FROM customs s ${whereSql} GROUP BY s.importer_country ORDER BY amount DESC LIMIT 10`).all(...params).map((r) => ({ ...r, amount: Math.round(r.amount) }));
   const byProduct = db.prepare(`SELECT s.hs_code, s.product name, COUNT(*) shipments, SUM(s.teu) teu, SUM(s.amount_usd) amount
@@ -265,7 +260,7 @@ export function customsAnalysis(q) {
     status: 200,
     body: {
       summary: { ...summary, amount: Math.round(summary.amount), teu: Math.round(summary.teu * 10) / 10, weight: Math.round(summary.weight) },
-      importers, potentials, top, year, byCountry, byProduct, byMonth, byExporter, alerts,
+      importers, potentials, byCountry, byProduct, byMonth, byExporter, alerts,
     },
   };
 }

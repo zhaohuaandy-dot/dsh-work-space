@@ -214,25 +214,39 @@ export function seed({ reset = false } = {}) {
   // 营销活动
   const insAct = db.prepare(`INSERT INTO activities (id, name, kind, status, target_count, sent_count, open_count, reply_count, start_date, end_date, owner_id, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  const YEAR = day(0).slice(0, 4);
   const acts = [
     [1, 'Q4 不锈钢阀门新品推广', '邮件营销', '进行中', day(-20), day(10)],
-    [2, '广交会 2026 秋季展后跟进', '展会', '已完成', day(-45), day(-10)],
+    [2, `${YEAR} 秋季广交会展后跟进`, '展会', '已完成', day(-45), day(-10)],
     [3, 'German Market EDM 第一轮', 'EDM群发', '已完成', day(-60), day(-30)],
     [4, 'LinkedIn 采购经理精准触达', '社媒营销', '进行中', day(-12), day(20)],
     [5, '老客户复购唤醒计划', '邮件营销', '已暂停', day(-70), day(-20)],
   ];
-  acts.forEach(([id, name, kind, status, start, end]) => {
-    const target = between(30, 260);
-    const sent = status === '已完成' ? target : Math.round(target * (0.3 + rand() * 0.5));
-    insAct.run(id, name, kind, status, target, sent, Math.round(sent * (0.2 + rand() * 0.3)), Math.round(sent * (0.03 + rand() * 0.08)), start, end, USERS[(id % 4) + 1].id, start);
-  });
   const insTarget = db.prepare(`INSERT INTO activity_targets (activity_id, customer_id, status, updated_at) VALUES (?, ?, ?, ?)`);
-  for (let a = 1; a <= 5; a++) {
-    for (let c = 1; c <= 18; c++) {
-      const cid = ((a - 1) * 9 + c - 1) % TOTAL + 1;
-      insTarget.run(a, cid, ['待发送', '已发送', '已打开', '已回复'][(a + c) % 4], stamp(-between(1, 40)));
+  acts.forEach(([id, name, kind, status, start, end]) => {
+    insAct.run(id, name, kind, status, 0, 0, 0, 0, start, end, USERS[(id % 4) + 1].id, start);
+    // 目标客户：按“待发送 → 已发送 → 已打开 → 已回复”的漏斗比例铺状态，
+    // 已完成的活动全部发出，进行中 / 已暂停的活动保留未发送目标。
+    const count = id === 5 ? 14 : 18;
+    const progress = status === '已完成' ? 0.85 : status === '进行中' ? 0.5 : 0.35;
+    for (let c = 1; c <= count; c++) {
+      const cid = ((id - 1) * 9 + c - 1) % TOTAL + 1;
+      const roll = (rand() + c / count) / 2;
+      let st;
+      if (status === '已完成') {
+        st = roll < progress * 0.35 ? '已回复' : roll < progress * 0.65 ? '已打开' : '已发送';
+      } else {
+        st = roll >= progress ? '待发送' : roll < progress * 0.35 ? '已回复' : roll < progress * 0.65 ? '已打开' : '已发送';
+      }
+      insTarget.run(id, cid, st, stamp(-between(1, 40)));
     }
-  }
+    // 计数由真实目标客户状态汇总得出，保证详情页与统计口径一致
+    const agg = db.prepare(`SELECT COUNT(*) total,
+        SUM(status <> '待发送') sent, SUM(status IN ('已打开','已回复')) opened, SUM(status = '已回复') replied
+      FROM activity_targets WHERE activity_id = ?`).get(id);
+    db.prepare('UPDATE activities SET target_count = ?, sent_count = ?, open_count = ?, reply_count = ? WHERE id = ?')
+      .run(agg.total, agg.sent ?? 0, agg.opened ?? 0, agg.replied ?? 0, id);
+  });
 
   // 邮件模板
   const insTpl = db.prepare(`INSERT INTO templates (name, category, subject, body, created_at) VALUES (?, ?, ?, ?, ?)`);

@@ -7,7 +7,7 @@ const COUNTRY_COLORS = ['#1c5fd8', '#f08c1a', '#12a16b', '#7b5cd6', '#e0483f', '
 export default async function customs({ query }) {
   const opts = await getOptions();
   const [a, list] = await Promise.all([
-    api('/customs/analysis', { query: { keyword: query.keyword, country: query.country, year: query.year } }),
+    api('/customs/analysis', { query: { keyword: query.keyword, country: query.country } }),
     api('/customs', { query: { customer_id: query.customer, size: 12 } }),
   ]);
   const s = a.summary;
