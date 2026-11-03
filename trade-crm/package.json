@@ -1,0 +1,14 @@
+{
+  "name": "trade-crm",
+  "version": "1.0.0",
+  "private": true,
+  "description": "外贸客户管理系统 — 参照孚盟MX 全流程版本的客户管理/业务管理能力实现",
+  "type": "module",
+  "engines": { "node": ">=22.5.0" },
+  "scripts": {
+    "start": "node server/index.mjs",
+    "seed": "node server/seed.mjs --reset",
+    "test": "node scripts/smoke.mjs",
+    "test:import": "node scripts/import-test.mjs"
+  }
+}
