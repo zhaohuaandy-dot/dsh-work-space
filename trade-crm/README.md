@@ -13,11 +13,20 @@ cd trade-crm
 npm start          # 默认 http://127.0.0.1:3000
 ```
 
+长期常驻运行（Windows 开机自启 + 崩溃自动重启 + 单实例保护）：
+
+```bat
+wscript.exe startup-entry.vbs    :: 启动守护进程（无窗口）
+node status.mjs                  :: 查看状态
+```
+
+也可双击 `start.cmd` / `stop.cmd`。详见 [RUNNING.md](RUNNING.md)。
+
 可选环境变量：
 
 | 变量 | 说明 | 默认值 |
 | --- | --- | --- |
-| `PORT` | 监听端口 | `3000` |
+| `PORT` | 监听端口 | `3000`（常驻脚本默认 `4317`） |
 | `HOST` | 监听地址 | `127.0.0.1` |
 | `DSH_TCRM_DATA` | 数据目录 | `trade-crm/data` |
 | `DSH_TCRM_DB` | 数据库文件路径 | `<数据目录>/trade-crm.db` |
@@ -154,3 +163,24 @@ trade-crm/
 | 邮件营销 / 开发信模板库 / 千里眼 | 营销活动漏斗、模板库与变量渲染 |
 
 > 未实现：单证管理（报关/议付单证）、财务管理（收款核销、利润结算）、供应链管理（供应商、采购单），以及 AI 外贸助理、移动 APP、MIC 平台对接、知识管理。
+
+## 常驻运行（Windows）
+
+`supervisor.mjs` 守护进程负责常驻：异常退出后按 1s→30s 退避自动重启、单实例锁防止重复拉起、`logs/server.log` 超过 5MB 自动轮转。
+
+| 文件 | 用途 |
+| --- | --- |
+| `supervisor.mjs` | 守护进程（自动重启 + 单实例 + 日志轮转） |
+| `startup-entry.vbs` | 静默启动守护进程；复制到「启动」文件夹即开机自启 |
+| `start.cmd` / `stop.cmd` | 双击启动 / 停止 |
+| `status.mjs` | 输出进程、端口、接口与最近日志 |
+
+```bat
+wscript.exe startup-entry.vbs     :: 立即启动（无窗口）
+node status.mjs                   :: 查看运行状态
+node stop.mjs                     :: 停止
+```
+
+> 注意：`start.cmd`、`stop.cmd`、`startup-entry.vbs` 必须保持 **ASCII-only**。`cmd.exe` 按 ANSI 解析 `.cmd`，`WScript` 按 ANSI 解析 `.vbs`，写入 UTF-8 中文会导致脚本解析失败、无法启动（本项目已踩过此坑）。
+
+完整说明见 [RUNNING.md](RUNNING.md)。
